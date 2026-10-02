@@ -59,12 +59,14 @@ def clean_frame(raw, source_file=""):
     df.loc[df["reviews"] < 0, "reviews"] = pd.NA
     for idx, row in df.iterrows():
         category = str(row["category"]) if pd.notna(row["category"]) else ""
-        if category.lower() not in ["clothing", "laptops", "makeup", "mobiles", "electronics", "shoes"]:
-            df.at[idx, "category"] = infer_category(category, row["subcategory"], row["product_name"], row["description"])
-        elif category.lower() == "clothing":
-            df.at[idx, "category"] = "Clothing"
-        else:
+        inferred = infer_category(row["product_name"], row["subcategory"], row["description"])
+        # Specific product text may refine a broad source label such as "Electronics".
+        if inferred != "Uncategorized":
+            df.at[idx, "category"] = inferred
+        elif category.lower() in ["clothing", "laptops", "makeup", "mobiles", "electronics", "shoes"]:
             df.at[idx, "category"] = category.title()
+        else:
+            df.at[idx, "category"] = "Uncategorized"
     df["category"] = df["category"].replace({"Laptop": "Laptops", "Mobile": "Mobiles"})
     df["source_file"] = Path(source_file).name if source_file else ""
     df = df[df["product_name"].notna() & (df["product_name"].astype(str).str.len() > 0)].copy()
